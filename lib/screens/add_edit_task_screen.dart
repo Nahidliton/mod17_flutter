@@ -84,30 +84,49 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     }
     setState(() => _saving = true);
 
-    final task = Task(
-      id: widget.task?.id ?? const Uuid().v4(),
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      subject: _subjectController.text.trim(),
-      dueDate: _dueDate!,
-      priority: _priority,
-      isCompleted: widget.task?.isCompleted ?? false,
-    );
     final email = AuthService.currentUserEmail;
     if (email == null) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
-    final tasks = await StorageService.loadTasksForUser(email);
-    final existingIndex = tasks.indexWhere((element) => element.id == task.id);
-    if (existingIndex >= 0) {
-      tasks[existingIndex] = task;
-    } else {
-      tasks.add(task);
+
+    try {
+      final task = Task(
+        id: widget.task?.id ?? const Uuid().v4(),
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        subject: _subjectController.text.trim(),
+        dueDate: _dueDate!,
+        priority: _priority,
+        isCompleted: widget.task?.isCompleted ?? false,
+      );
+
+      if (widget.task != null) {
+        // Update existing task
+        await StorageService.updateTask(task);
+      } else {
+        // Add new task
+        await StorageService.addTask(email, task);
+      }
+
+      setState(() => _saving = false);
+      if (!mounted) return;
+      Navigator.pop(context, task);
+    } catch (e) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save task: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-    await StorageService.saveTasksForUser(email, tasks);
-    setState(() => _saving = false);
-    if (!mounted) return;
-    Navigator.pop(context, task);
   }
 
   @override

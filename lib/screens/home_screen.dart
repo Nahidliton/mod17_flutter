@@ -22,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final _searchController = TextEditingController();
   List<Task> _tasks = [];
   bool _loading = true;
-  bool _initialLoad = true;
   String _priorityFilter = 'All';
   String _statusFilter = 'All';
   String _userName = 'Student';
@@ -36,10 +35,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadTasks() async {
     final email = AuthService.currentUserEmail;
+    
     if (email == null) {
       setState(() {
         _loading = false;
-        _initialLoad = false;
       });
       return;
     }
@@ -47,12 +46,15 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _loading = true);
     
     try {
+      // Load tasks
       _tasks = await StorageService.loadTasksForUser(email);
+      
+      // Load user profile
       final profile = await StorageService.loadUser(email);
       if (profile != null) {
         _userName = profile.name;
       } else {
-        // If profile doesn't exist, try to create a default one
+        // Create default profile if not exists
         final newProfile = UserProfile(
           name: 'Student',
           email: email,
@@ -62,20 +64,17 @@ class _HomeScreenState extends State<HomeScreen> {
         _userName = 'Student';
       }
     } catch (e) {
-      // Handle error silently
+      // Handle error
     }
     
     setState(() {
       _loading = false;
-      _initialLoad = false;
     });
   }
 
   Future<void> _saveTasks() async {
     final email = AuthService.currentUserEmail;
-    if (email == null) {
-      return;
-    }
+    if (email == null) return;
     await StorageService.saveTasksForUser(email, _tasks);
   }
 
@@ -110,9 +109,8 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    if (confirmed != true) {
-      return;
-    }
+    if (confirmed != true) return;
+    
     setState(() {
       _tasks.removeWhere((element) => element.id == task.id);
     });
@@ -204,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        child: _loading && _initialLoad
+        child: _loading
             ? const Center(
                 child: CircularProgressIndicator(
                   color: Color(0xFF6C63FF),
@@ -306,9 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF1A1A2E)
-              : Colors.white,
+          color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(

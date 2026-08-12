@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:student_task_manager/models/task.dart';
@@ -14,6 +13,8 @@ class StorageService {
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
+
+  // ==================== THEME ====================
 
   static Future<ThemeMode> loadThemeMode() async {
     final value = _prefs?.getString(_themeModeKey);
@@ -37,13 +38,19 @@ class StorageService {
     );
   }
 
+  // ==================== USER PROFILE ====================
+
   static Map<String, dynamic> _loadRawUsers() {
     final raw = _prefs?.getString(_userKey);
     if (raw == null || raw.isEmpty) {
       return {};
     }
-    final data = jsonDecode(raw);
-    return data is Map<String, dynamic> ? data : {};
+    try {
+      final data = jsonDecode(raw);
+      return data is Map<String, dynamic> ? data : {};
+    } catch (e) {
+      return {};
+    }
   }
 
   static Future<void> _saveRawUsers(Map<String, dynamic> users) async {
@@ -61,8 +68,18 @@ class StorageService {
     if (!users.containsKey(email)) {
       return null;
     }
-    return UserProfile.fromMap(Map<String, dynamic>.from(users[email] as Map));
+    try {
+      return UserProfile.fromMap(Map<String, dynamic>.from(users[email] as Map));
+    } catch (e) {
+      return null;
+    }
   }
+
+  static Future<void> updateUser(UserProfile profile) async {
+    await saveUser(profile);
+  }
+
+  // ==================== AUTH SESSION ====================
 
   static Future<void> setCurrentUserEmail(String? email) async {
     if (email == null) {
@@ -76,19 +93,50 @@ class StorageService {
     return _prefs?.getString(_currentEmailKey);
   }
 
+  // ==================== TASKS ====================
+
   static Future<List<Task>> loadTasksForUser(String email) async {
-    final raw = _prefs?.getString('tasks_$email');
-    if (raw == null || raw.isEmpty) {
+    try {
+      final raw = _prefs?.getString('tasks_$email');
+      if (raw == null || raw.isEmpty) {
+        return [];
+      }
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list
+          .map((item) => Task.fromMap(Map<String, dynamic>.from(item as Map)))
+          .toList();
+    } catch (e) {
       return [];
     }
-    final list = jsonDecode(raw) as List<dynamic>;
-    return list
-        .map((item) => Task.fromMap(Map<String, dynamic>.from(item as Map)))
-        .toList();
   }
 
   static Future<void> saveTasksForUser(String email, List<Task> tasks) async {
     final data = tasks.map((task) => task.toMap()).toList();
     await _prefs?.setString('tasks_$email', jsonEncode(data));
+  }
+
+  static Future<void> addTask(String email, Task task) async {
+    final tasks = await loadTasksForUser(email);
+    tasks.add(task);
+    await saveTasksForUser(email, tasks);
+  }
+
+  static Future<void> deleteTask(String taskId) async {
+    final email = getCurrentUserEmail();
+    if (email == null) return;
+    final tasks = await loadTasksForUser(email);
+    tasks.removeWhere((task) => task.id == taskId);
+    await saveTasksForUser(email, tasks);
+  }
+
+  static Future<void> updateTask(Task task) async {
+    final email = getCurrentUserEmail();
+    if (email == null) return;
+    final tasks = await loadTasksForUser(email);
+    final index = tasks.indexWhere((t) => t.id == task.id);
+    if (index != -1) {
+      tasks[index] = task;
+      await saveTasksForUser(email, tasks);
+    }
   }
 }

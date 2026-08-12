@@ -12,16 +12,25 @@ import 'package:student_task_manager/services/auth_service.dart';
 import 'package:student_task_manager/services/storage_service.dart';
 
 void main() async {
-  // Firebase initialization
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
+  
+  try {
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Handle Firebase initialization error
+    print('Firebase initialization error: $e');
+  }
+  
+  // Initialize Storage Service
   await StorageService.init();
+  
   // Load saved theme mode
   final savedTheme = await StorageService.loadThemeMode();
   AppTheme.instance.value = savedTheme;
+  
   runApp(const StudentTaskManagerApp());
 }
 
@@ -37,7 +46,6 @@ class StudentTaskManagerApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppTheme.instance,
       builder: (context, themeMode, child) {
-        // Force rebuild when theme changes
         return MaterialApp(
           title: 'Student Task Manager',
           debugShowCheckedModeBanner: false,
