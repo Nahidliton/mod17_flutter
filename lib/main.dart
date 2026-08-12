@@ -1,4 +1,6 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:student_task_manager/firebase_options.dart';
 import 'package:student_task_manager/screens/add_edit_task_screen.dart';
 import 'package:student_task_manager/screens/forgot_password_screen.dart';
 import 'package:student_task_manager/screens/home_screen.dart';
@@ -10,7 +12,12 @@ import 'package:student_task_manager/services/auth_service.dart';
 import 'package:student_task_manager/services/storage_service.dart';
 
 void main() async {
+  // Firebase initialization
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   await StorageService.init();
   // Load saved theme mode
   final savedTheme = await StorageService.loadThemeMode();
