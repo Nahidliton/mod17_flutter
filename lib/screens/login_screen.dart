@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'package:student_task_manager/models/user_profile.dart';
 import 'package:student_task_manager/screens/forgot_password_screen.dart';
 import 'package:student_task_manager/screens/home_screen.dart';
 import 'package:student_task_manager/screens/signup_screen.dart';
 import 'package:student_task_manager/services/auth_service.dart';
+import 'package:student_task_manager/services/storage_service.dart';
 import 'package:student_task_manager/widgets/custom_text_field.dart';
 import 'package:student_task_manager/widgets/theme_toggle.dart';
 
@@ -35,10 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-
-  // ============================================================
-  // EMAIL / PASSWORD LOGIN
-  // ============================================================
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) {
@@ -94,10 +92,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ============================================================
-  // GOOGLE SIGN-IN
-  // ============================================================
-
   Future<void> _signInWithGoogle() async {
     if (_googleLoading) return;
 
@@ -107,10 +101,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       UserCredential userCredential;
-
-      // ==========================================================
-      // WEB / CHROME
-      // ==========================================================
 
       if (kIsWeb) {
         final GoogleAuthProvider provider = GoogleAuthProvider();
@@ -125,13 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         userCredential =
             await FirebaseAuth.instance.signInWithPopup(provider);
-      }
-
-      // ==========================================================
-      // ANDROID / IOS
-      // ==========================================================
-
-      else {
+      } else {
         final GoogleSignIn googleSignIn =
             GoogleSignIn.instance;
 
@@ -141,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
             await googleSignIn.authenticate();
 
         final GoogleSignInAuthentication googleAuth =
-            googleUser.authentication;
+            await googleUser.authentication;
 
         final credential = GoogleAuthProvider.credential(
           idToken: googleAuth.idToken,
@@ -164,8 +148,34 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       // ==========================================================
-      // SUCCESS
+      // SAVE USER PROFILE TO LOCAL STORAGE
       // ==========================================================
+      
+      final email = user.email ?? '';
+      final name = user.displayName ?? 'User';
+      
+      // Check if user already exists
+      final existingUser = await StorageService.loadUser(email);
+      
+      if (existingUser == null) {
+        // Create new user profile with a random password since Google handles auth
+        final newUser = UserProfile(
+          name: name,
+          email: email,
+          password: DateTime.now().millisecondsSinceEpoch.toString(), // Random password
+          profileImagePath: user.photoURL,
+        );
+        await StorageService.saveUser(newUser);
+        await StorageService.setCurrentUserEmail(email);
+      } else {
+        // Update existing user's name if changed
+        final updatedUser = existingUser.copyWith(
+          name: name,
+          profileImagePath: user.photoURL ?? existingUser.profileImagePath,
+        );
+        await StorageService.saveUser(updatedUser);
+        await StorageService.setCurrentUserEmail(email);
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -180,13 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         HomeScreen.routeName,
       );
-    }
-
-    // ============================================================
-    // FIREBASE AUTH ERROR
-    // ============================================================
-
-    on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e) {
       if (!mounted) return;
 
       String message;
@@ -227,13 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Colors.red,
         ),
       );
-    }
-
-    // ============================================================
-    // GENERAL ERROR
-    // ============================================================
-
-    catch (e) {
+    } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -244,9 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Colors.red,
         ),
       );
-    }
-
-    finally {
+    } finally {
       if (mounted) {
         setState(() {
           _googleLoading = false;
@@ -254,10 +250,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
-
-  // ============================================================
-  // VALIDATION
-  // ============================================================
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
@@ -284,10 +276,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return null;
   }
-
-  // ============================================================
-  // UI
-  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -321,20 +309,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // ==================================================
-                    // THEME TOGGLE
-                    // ==================================================
-
                     const Align(
                       alignment: Alignment.topRight,
                       child: ThemeToggle(),
                     ),
 
                     const SizedBox(height: 40),
-
-                    // ==================================================
-                    // LOGO
-                    // ==================================================
 
                     Container(
                       width: 80,
@@ -366,10 +346,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 32),
 
-                    // ==================================================
-                    // TITLE
-                    // ==================================================
-
                     Text(
                       'Welcome Back!',
                       style: Theme.of(context)
@@ -397,15 +373,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 40),
 
-                    // ==================================================
-                    // LOGIN FORM
-                    // ==================================================
-
                     Form(
                       key: _formKey,
                       child: Column(
                         children: [
-                          // EMAIL
                           CustomTextField(
                             controller: _emailController,
                             label: 'Email Address',
@@ -418,7 +389,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           const SizedBox(height: 16),
 
-                          // PASSWORD
                           CustomTextField(
                             controller: _passwordController,
                             label: 'Password',
@@ -449,7 +419,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
 
-                          // FORGOT PASSWORD
                           const SizedBox(height: 8),
 
                           Align(
@@ -474,10 +443,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
 
                           const SizedBox(height: 24),
-
-                          // ==================================================
-                          // SIGN IN BUTTON
-                          // ==================================================
 
                           SizedBox(
                             width: double.infinity,
@@ -529,10 +494,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           const SizedBox(height: 24),
 
-                          // ==================================================
-                          // OR DIVIDER
-                          // ==================================================
-
                           Row(
                             children: [
                               Expanded(
@@ -581,10 +542,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           const SizedBox(height: 24),
 
-                          // ==================================================
-                          // GOOGLE SIGN-IN BUTTON
-                          // ==================================================
-
                           SizedBox(
                             width: double.infinity,
                             height: 56,
@@ -624,7 +581,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                           MainAxisAlignment
                                               .center,
                                       children: [
-                                        // Google "G"
                                         Container(
                                           width: 28,
                                           height: 28,
@@ -683,10 +639,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
 
                     const SizedBox(height: 32),
-
-                    // ==================================================
-                    // SIGN UP
-                    // ==================================================
 
                     Row(
                       mainAxisAlignment:

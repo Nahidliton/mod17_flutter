@@ -149,20 +149,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ],
                       ),
-                      child: CircleAvatar(
-                        radius: 56,
-                        backgroundColor: Colors.transparent,
-                        backgroundImage: _profile?.profileImagePath != null
-                            ? FileImage(File(_profile!.profileImagePath!))
-                            : null,
-                        child: _profile?.profileImagePath == null
-                            ? const Icon(
-                                Icons.person,
-                                size: 50,
-                                color: Colors.white,
-                              )
-                            : null,
-                      ),
+                      child: _buildProfileImage(),
                     ),
                     Positioned(
                       right: 0,
@@ -313,5 +300,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildProfileImage() {
+    final imagePath = _profile?.profileImagePath;
+    
+    if (imagePath != null && imagePath.startsWith('http')) {
+      // Network image (from Google)
+      return ClipOval(
+        child: Image.network(
+          imagePath,
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.person,
+              size: 50,
+              color: Colors.white,
+            );
+          },
+        ),
+      );
+    } else if (imagePath != null && imagePath.isNotEmpty) {
+      // Local file image
+      return ClipOval(
+        child: Image.file(
+          File(imagePath),
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.person,
+              size: 50,
+              color: Colors.white,
+            );
+          },
+        ),
+      );
+    } else {
+      // Default avatar
+      return const CircleAvatar(
+        radius: 56,
+        backgroundColor: Colors.transparent,
+        child: Icon(
+          Icons.person,
+          size: 50,
+          color: Colors.white,
+        ),
+      );
+    }
   }
 }

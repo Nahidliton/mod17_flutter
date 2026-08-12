@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:student_task_manager/models/task.dart';
+import 'package:student_task_manager/models/user_profile.dart';
 import 'package:student_task_manager/screens/add_edit_task_screen.dart';
 import 'package:student_task_manager/screens/profile_screen.dart';
 import 'package:student_task_manager/services/auth_service.dart';
@@ -21,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _searchController = TextEditingController();
   List<Task> _tasks = [];
   bool _loading = true;
+  bool _initialLoad = true;
   String _priorityFilter = 'All';
   String _statusFilter = 'All';
   String _userName = 'Student';
@@ -35,15 +37,38 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadTasks() async {
     final email = AuthService.currentUserEmail;
     if (email == null) {
+      setState(() {
+        _loading = false;
+        _initialLoad = false;
+      });
       return;
     }
+    
     setState(() => _loading = true);
-    _tasks = await StorageService.loadTasksForUser(email);
-    final profile = await StorageService.loadUser(email);
-    if (profile != null) {
-      _userName = profile.name;
+    
+    try {
+      _tasks = await StorageService.loadTasksForUser(email);
+      final profile = await StorageService.loadUser(email);
+      if (profile != null) {
+        _userName = profile.name;
+      } else {
+        // If profile doesn't exist, try to create a default one
+        final newProfile = UserProfile(
+          name: 'Student',
+          email: email,
+          password: DateTime.now().millisecondsSinceEpoch.toString(),
+        );
+        await StorageService.saveUser(newProfile);
+        _userName = 'Student';
+      }
+    } catch (e) {
+      // Handle error silently
     }
-    setState(() => _loading = false);
+    
+    setState(() {
+      _loading = false;
+      _initialLoad = false;
+    });
   }
 
   Future<void> _saveTasks() async {
@@ -179,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        child: _loading
+        child: _loading && _initialLoad
             ? const Center(
                 child: CircularProgressIndicator(
                   color: Color(0xFF6C63FF),
