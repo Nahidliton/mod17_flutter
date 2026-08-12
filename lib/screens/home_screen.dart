@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _priorityFilter = 'All';
   String _statusFilter = 'All';
   String _userName = 'Student';
+  String _selectedView = 'All';
 
   @override
   void initState() {
@@ -69,11 +70,16 @@ class _HomeScreenState extends State<HomeScreen> {
           content: const Text('Are you sure you want to delete this task?'),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete')),
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+            ),
           ],
         );
       },
@@ -91,7 +97,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Task> get _filteredTasks {
     final query = _searchController.text.toLowerCase();
     return _tasks.where((task) {
-      final searchMatch = task.title.toLowerCase().contains(query);
+      final searchMatch = task.title.toLowerCase().contains(query) ||
+          task.subject.toLowerCase().contains(query);
       final priorityMatch =
           _priorityFilter == 'All' || task.priority == _priorityFilter;
       final statusMatch = _statusFilter == 'All' ||
@@ -106,7 +113,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openTaskEditor([Task? task]) async {
     final result = await Navigator.push<Task?>(
       context,
-      MaterialPageRoute(builder: (context) => AddEditTaskScreen(task: task)),
+      MaterialPageRoute(
+        builder: (context) => AddEditTaskScreen(task: task),
+      ),
     );
     if (result != null) {
       final existingIndex = _tasks.indexWhere((item) => item.id == result.id);
@@ -133,50 +142,66 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final filteredTasks = _filteredTasks;
+
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0A0A0F) : const Color(0xFFF8F9FE),
       appBar: AppBar(
         title: const Text('My Tasks'),
         actions: [
           const ThemeToggle(),
           IconButton(
-            icon: const Icon(Icons.person),
+            icon: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.person,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
             onPressed: () async {
               await Navigator.pushNamed(context, ProfileScreen.routeName);
               await _loadTasks();
             },
-          )
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openTaskEditor(),
-        tooltip: 'Add Task',
         child: const Icon(Icons.add),
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF6C63FF),
+                ),
+              )
             : Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(context),
+                    const SizedBox(height: 12),
+                    _buildHeader(),
                     const SizedBox(height: 20),
                     _buildSearchBar(),
                     const SizedBox(height: 12),
-                    _buildFilters(),
-                    const SizedBox(height: 20),
+                    _buildQuickFilters(),
+                    const SizedBox(height: 16),
                     Expanded(
                       child: filteredTasks.isEmpty
-                          ? const EmptyState(
-                              title: 'No tasks found',
-                              message:
-                                  'Add a task or change your search and filters to see more tasks.',
-                            )
+                          ? const EmptyState()
                           : ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 20),
                               itemCount: filteredTasks.length,
                               itemBuilder: (context, index) {
                                 final task = filteredTasks[index];
@@ -197,112 +222,181 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Welcome back,',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 6),
-        Text(_userName,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
+        Text(
+          'Hello, $_userName 👋',
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'You have ${_pendingCount} pending tasks',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(
-                child: _buildStatusCard(
-                    'Pending',
-                    _pendingCount,
-                    const Color.fromRGBO(255, 165, 0, 0.12),
-                    const Color.fromRGBO(255, 165, 0, 1))),
+            _buildStatCard(
+              label: 'Pending',
+              value: _pendingCount,
+              color: const Color(0xFFFF6584),
+              icon: Icons.pending_actions,
+            ),
             const SizedBox(width: 12),
-            Expanded(
-                child: _buildStatusCard(
-                    'Completed',
-                    _completedCount,
-                    const Color.fromRGBO(76, 175, 80, 0.12),
-                    const Color.fromRGBO(76, 175, 80, 1))),
+            _buildStatCard(
+              label: 'Completed',
+              value: _completedCount,
+              color: const Color(0xFF4CAF50),
+              icon: Icons.check_circle,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              label: 'Total',
+              value: _tasks.length,
+              color: const Color(0xFF6C63FF),
+              icon: Icons.task,
+            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildStatusCard(
-      String label, int value, Color backgroundColor, Color textColor) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          Text('$value',
+  Widget _buildStatCard({
+    required String label,
+    required int value,
+    required Color color,
+    required IconData icon,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFF1A1A2E)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(isDark ? 20 : 10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$value',
               style: TextStyle(
-                  color: textColor, fontSize: 28, fontWeight: FontWeight.bold)),
-        ],
+                color: color,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSearchBar() {
-    return TextField(
-      controller: _searchController,
-      decoration: InputDecoration(
-        hintText: 'Search tasks by title',
-        prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 20 : 10),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      onChanged: (_) => setState(() {}),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search tasks...',
+          prefixIcon: const Icon(
+            Icons.search,
+            color: Color(0xFF6C63FF),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
     );
   }
 
-  Widget _buildFilters() {
-    return Row(
-      children: [
-        Expanded(
-          child: DropdownButtonFormField<String>(
-            initialValue: _priorityFilter,
-            items: ['All', 'Low', 'Medium', 'High']
-                .map((label) =>
-                    DropdownMenuItem(value: label, child: Text(label)))
-                .toList(),
-            onChanged: (value) =>
-                setState(() => _priorityFilter = value ?? 'All'),
-            decoration: InputDecoration(
-                labelText: 'Priority',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14))),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: DropdownButtonFormField<String>(
-            initialValue: _statusFilter,
-            items: ['All', 'Pending', 'Completed']
-                .map((label) =>
-                    DropdownMenuItem(value: label, child: Text(label)))
-                .toList(),
-            onChanged: (value) =>
-                setState(() => _statusFilter = value ?? 'All'),
-            decoration: InputDecoration(
-                labelText: 'Status',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14))),
-          ),
-        ),
-      ],
+  Widget _buildQuickFilters() {
+    final filters = ['All', 'Pending', 'Completed'];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: filters.map((filter) {
+          final isSelected = _selectedView == filter;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text(filter),
+              selected: isSelected,
+              onSelected: (_) {
+                setState(() {
+                  _selectedView = filter;
+                  _statusFilter = filter == 'All' ? 'All' : filter;
+                });
+              },
+              backgroundColor: Colors.transparent,
+              selectedColor: const Color(0xFF6C63FF).withAlpha(30),
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? const Color(0xFF6C63FF)
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: isSelected
+                    ? BorderSide.none
+                    : BorderSide(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant
+                            .withAlpha(40),
+                      ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }

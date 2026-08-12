@@ -52,6 +52,17 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       initialDate: _dueDate ?? today,
       firstDate: today.subtract(const Duration(days: 365)),
       lastDate: today.add(const Duration(days: 365 * 2)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF6C63FF),
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (selected != null) {
       setState(() => _dueDate = selected);
@@ -64,7 +75,11 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     }
     if (_dueDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a due date.')));
+        const SnackBar(
+          content: Text('Please select a due date.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
     setState(() => _saving = true);
@@ -97,78 +112,206 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isEditing = widget.task != null;
+
     return Scaffold(
-          appBar: AppBar(title: Text(isEditing ? 'Edit Task' : 'Add Task'), actions: [const ThemeToggle()]),
+      backgroundColor: isDark ? const Color(0xFF0A0A0F) : const Color(0xFFF8F9FE),
+      appBar: AppBar(
+        title: Text(
+          isEditing ? 'Edit Task' : 'Create Task',
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 22,
+          ),
+        ),
+        actions: const [ThemeToggle()],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: isDark ? Colors.white12 : Colors.black12,
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: SingleChildScrollView(
             child: Form(
               key: _formKey,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text(
+                    'Task Details',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   CustomTextField(
-                      controller: _titleController,
-                      label: 'Title',
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Title is required'
-                          : null),
+                    controller: _titleController,
+                    label: 'Task Title',
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Title is required'
+                        : null,
+                    prefixIcon: Icons.title,
+                  ),
                   const SizedBox(height: 16),
                   CustomTextField(
-                      controller: _subjectController,
-                      label: 'Subject',
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Subject is required'
-                          : null),
+                    controller: _subjectController,
+                    label: 'Subject',
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Subject is required'
+                        : null,
+                    prefixIcon: Icons.book_outlined,
+                  ),
                   const SizedBox(height: 16),
                   CustomTextField(
-                      controller: _descriptionController,
-                      label: 'Description',
-                      hintText: 'Describe the task',
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Description is required'
-                          : null),
+                    controller: _descriptionController,
+                    label: 'Description',
+                    hintText: 'Describe the task...',
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Description is required'
+                        : null,
+                    prefixIcon: Icons.description_outlined,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Due Date & Priority',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _pickDueDate,
-                          child: Text(_dueDate == null
-                              ? 'Select Due Date'
-                              : 'Due: ${_dueDate!.toLocal().toString().split(' ')[0]}'),
+                  GestureDetector(
+                    onTap: _pickDueDate,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1A1A2E).withAlpha(180)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: _dueDate != null
+                              ? const Color(0xFF6C63FF)
+                              : Colors.transparent,
+                          width: 2,
                         ),
                       ),
-                    ],
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            color: Color(0xFF6C63FF),
+                            size: 22,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            _dueDate == null
+                                ? 'Select Due Date'
+                                : 'Due: ${_dueDate!.toLocal().toString().split(' ')[0]}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: _dueDate == null
+                                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                                  : null,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_dueDate != null)
+                            Icon(
+                              Icons.check_circle,
+                              color: const Color(0xFF6C63FF),
+                              size: 20,
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    initialValue: _priority,
+                    value: _priority,
                     decoration: InputDecoration(
                       labelText: 'Priority',
+                      prefixIcon: const Icon(
+                        Icons.flag_outlined,
+                        color: Color(0xFF6C63FF),
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? const Color(0xFF1A1A2E).withAlpha(180)
+                          : Colors.white,
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF6C63FF),
+                          width: 2,
+                        ),
+                      ),
                     ),
                     items: ['Low', 'Medium', 'High']
-                        .map((label) =>
-                            DropdownMenuItem(value: label, child: Text(label)))
+                        .map((label) => DropdownMenuItem(
+                              value: label,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: label == 'Low'
+                                          ? const Color(0xFF4CAF50)
+                                          : label == 'Medium'
+                                              ? const Color(0xFFFFB74D)
+                                              : const Color(0xFFFF6584),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(label),
+                                ],
+                              ),
+                            ))
                         .toList(),
                     onChanged: (value) =>
                         setState(() => _priority = value ?? 'Low'),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _saving ? null : _saveTask,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C63FF),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                       child: _saving
                           ? const SizedBox(
                               width: 24,
                               height: 24,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 3, color: Colors.white))
-                          : Text(isEditing ? 'Save Changes' : 'Add Task'),
+                                strokeWidth: 3,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              isEditing ? 'Update Task' : 'Create Task',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                     ),
                   ),
                 ],

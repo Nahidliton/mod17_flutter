@@ -1,38 +1,53 @@
 import 'package:flutter/material.dart';
 
 class EmptyState extends StatelessWidget {
-  final String title;
-  final String message;
-  final IconData icon;
-
   const EmptyState({
     super.key,
-    required this.title,
-    required this.message,
-    this.icon = Icons.task_alt,
   });
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                size: 90,
-                color: Theme.of(context).colorScheme.primary.withAlpha(179)),
-            const SizedBox(height: 20),
-            Text(title,
-                style: Theme.of(context).textTheme.headlineSmall,
-                textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            Text(message,
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6C63FF).withAlpha(40),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.task_alt,
+              color: Colors.white,
+              size: 50,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'No Tasks Yet',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap the + button to add your first task',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

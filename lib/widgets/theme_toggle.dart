@@ -5,47 +5,43 @@ import 'package:student_task_manager/services/storage_service.dart';
 class ThemeToggle extends StatelessWidget {
   const ThemeToggle({super.key});
 
-  Future<void> _openThemeSheet(BuildContext context) async {
-    await showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setState) {
-          final isDark = AppTheme.instance.value == ThemeMode.dark;
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SwitchListTile(
-                  value: isDark,
-                  onChanged: (value) async {
-                    final mode = value ? ThemeMode.dark : ThemeMode.light;
-                    AppTheme.instance.value = mode;
-                    await StorageService.saveThemeMode(mode);
-                    setState(() {});
-                    // close the sheet after a small delay so user sees the change
-                  },
-                  title: const Text('Dark Mode'),
-                  secondary: const Icon(Icons.dark_mode),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'))
-              ],
-            ),
-          );
-        });
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: 'Dark Mode',
-      icon: const Icon(Icons.dark_mode),
-      onPressed: () => _openThemeSheet(context),
+    // Listen to theme changes
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppTheme.instance,
+      builder: (context, themeMode, child) {
+        final isDark = themeMode == ThemeMode.dark;
+        
+        return Container(
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            color: isDark 
+                ? Colors.white.withValues(alpha: 0.12)
+                : const Color(0xFF6C63FF).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IconButton(
+            tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Icon(
+                isDark ? Icons.light_mode : Icons.dark_mode,
+                key: ValueKey(isDark),
+                color: isDark ? Colors.white : const Color(0xFF6C63FF),
+                size: 22,
+              ),
+            ),
+            onPressed: () async {
+              final newMode = isDark ? ThemeMode.light : ThemeMode.dark;
+              // Update the ValueNotifier
+              AppTheme.instance.value = newMode;
+              // Save the preference
+              await StorageService.saveThemeMode(newMode);
+            },
+          ),
+        );
+      },
     );
   }
 }

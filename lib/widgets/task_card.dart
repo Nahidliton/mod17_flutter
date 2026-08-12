@@ -18,99 +18,199 @@ class TaskCard extends StatelessWidget {
   Color _priorityColor() {
     switch (task.priority) {
       case 'High':
-        return Colors.red.shade400;
+        return const Color(0xFFFF6584);
       case 'Medium':
-        return Colors.orange.shade400;
+        return const Color(0xFFFFB74D);
       default:
-        return Colors.green.shade400;
+        return const Color(0xFF4CAF50);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 20 : 8),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onToggleComplete,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(task.title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 6),
-                      Text(task.subject,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                    ],
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task.title,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: task.isCompleted
+                                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                                  : Theme.of(context).textTheme.titleLarge?.color,
+                              decoration: task.isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.book_outlined,
+                                size: 14,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                task.subject,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: _priorityColor().withAlpha(20),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Text(
+                        task.priority,
+                        style: TextStyle(
+                          color: _priorityColor(),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (task.description.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    task.description,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                ],
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      task.dueDateFormatted,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (task.isCompleted)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4CAF50).withAlpha(20),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '✓ Done',
+                          style: TextStyle(
+                            color: Color(0xFF4CAF50),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(
-                      task.isCompleted
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: task.isCompleted
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurfaceVariant),
-                  onPressed: onToggleComplete,
-                )
+                const Divider(height: 20),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        task.isCompleted
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: task.isCompleted
+                            ? const Color(0xFF4CAF50)
+                            : const Color(0xFF6C63FF),
+                        size: 22,
+                      ),
+                      onPressed: onToggleComplete,
+                      tooltip: task.isCompleted ? 'Mark as pending' : 'Mark as done',
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      task.isCompleted ? 'Completed' : 'Mark as done',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: task.isCompleted
+                            ? const Color(0xFF4CAF50)
+                            : const Color(0xFF6C63FF),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.edit_outlined,
+                        color: Color(0xFF6C63FF),
+                        size: 22,
+                      ),
+                      onPressed: onEdit,
+                      tooltip: 'Edit',
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Color(0xFFFF6584),
+                        size: 22,
+                      ),
+                      onPressed: onDelete,
+                      tooltip: 'Delete',
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(task.description,
-                style: Theme.of(context).textTheme.bodyMedium,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Chip(
-                  backgroundColor: _priorityColor().withAlpha(46),
-                  label: Text(task.priority,
-                      style: TextStyle(color: _priorityColor())),
-                ),
-                Chip(
-                  label: Text(task.dueDateFormatted),
-                  avatar: const Icon(Icons.calendar_today, size: 16),
-                ),
-                if (task.isCompleted)
-                  const Chip(
-                    label: Text('Completed'),
-                    avatar: Icon(Icons.check, size: 16),
-                  ),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: onEdit,
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: Icon(Icons.delete,
-                      color: Theme.of(context).colorScheme.error),
-                  onPressed: onDelete,
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

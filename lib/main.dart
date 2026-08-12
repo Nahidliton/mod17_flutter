@@ -12,7 +12,9 @@ import 'package:student_task_manager/services/storage_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await StorageService.init();
-  AppTheme.instance.value = await StorageService.loadThemeMode();
+  // Load saved theme mode
+  final savedTheme = await StorageService.loadThemeMode();
+  AppTheme.instance.value = savedTheme;
   runApp(const StudentTaskManagerApp());
 }
 
@@ -28,6 +30,7 @@ class StudentTaskManagerApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppTheme.instance,
       builder: (context, themeMode, child) {
+        // Force rebuild when theme changes
         return MaterialApp(
           title: 'Student Task Manager',
           debugShowCheckedModeBanner: false,
@@ -47,7 +50,8 @@ class StudentTaskManagerApp extends StatelessWidget {
             if (settings.name == AddEditTaskScreen.routeName) {
               final task = settings.arguments as dynamic;
               return MaterialPageRoute(
-                  builder: (_) => AddEditTaskScreen(task: task));
+                builder: (_) => AddEditTaskScreen(task: task),
+              );
             }
             return null;
           },
